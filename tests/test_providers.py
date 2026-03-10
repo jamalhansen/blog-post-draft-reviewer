@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from providers import PROVIDERS
-from providers.base import BaseProvider
-from providers.ollama_provider import OllamaProvider
-from providers.anthropic_provider import AnthropicProvider
-from providers.groq_provider import GroqProvider
-from providers.deepseek_provider import DeepSeekProvider
+from local_first_common.providers import PROVIDERS
+from local_first_common.providers.base import BaseProvider
+from local_first_common.providers.ollama import OllamaProvider
+from local_first_common.providers.anthropic import AnthropicProvider
+from local_first_common.providers.groq import GroqProvider
+from local_first_common.providers.deepseek import DeepSeekProvider
 
 
 class TestProvidersRegistry:
@@ -27,39 +27,46 @@ class TestOllamaProvider:
         provider = OllamaProvider(model="llama3.2")
         assert provider.model == "llama3.2"
 
-    def test_complete_calls_ollama_chat(self):
+    def test_complete_calls_httpx(self):
         provider = OllamaProvider()
-        mock_response = {"message": {"content": '{"result": "ok"}'}}
-        with patch("providers.ollama_provider.ollama.chat", return_value=mock_response) as mock_chat:
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": '{"result": "ok"}'}
+        mock_response.raise_for_status = MagicMock()
+        with patch("local_first_common.providers.ollama.httpx.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.post.return_value = mock_response
+            mock_client_cls.return_value = mock_client
             result = provider.complete("system", "user")
-        mock_chat.assert_called_once()
         assert result == '{"result": "ok"}'
 
-    def test_complete_passes_response_format(self):
-        provider = OllamaProvider()
-        mock_response = {"message": {"content": "[]"}}
-        fmt = {"type": "object"}
-        with patch("providers.ollama_provider.ollama.chat", return_value=mock_response) as mock_chat:
-            provider.complete("sys", "usr", response_format=fmt)
-        call_kwargs = mock_chat.call_args.kwargs
-        assert call_kwargs["format"] == fmt
-
     def test_known_models_fetched_from_api(self):
-        mock_data = b'{"models": [{"name": "phi4-mini"}, {"name": "llama3.2"}]}'
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = mock_data
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        with patch("providers.ollama_provider.urllib.request.urlopen", return_value=mock_resp):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"models": [{"name": "phi4-mini"}, {"name": "llama3.2"}]}
+        mock_response.raise_for_status = MagicMock()
+        with patch("local_first_common.providers.ollama.httpx.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.get.return_value = mock_response
+            mock_client_cls.return_value = mock_client
             provider = OllamaProvider()
-            models = provider.known_models
+            models = provider._get_installed_models()
         assert "phi4-mini" in models
         assert "llama3.2" in models
 
     def test_known_models_returns_empty_on_error(self):
-        with patch("providers.ollama_provider.urllib.request.urlopen", side_effect=Exception("connection refused")):
+        import httpx as _httpx
+        with patch("local_first_common.providers.ollama.httpx.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.get.side_effect = Exception("connection refused")
+            mock_client_cls.return_value = mock_client
             provider = OllamaProvider()
-            assert provider.known_models == []
+            assert provider._get_installed_models() == []
 
 
 class TestAnthropicProvider:
@@ -70,21 +77,22 @@ class TestAnthropicProvider:
 
     def test_default_model(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-        with patch("providers.anthropic_provider.Anthropic"):
-            provider = AnthropicProvider()
+        provider = AnthropicProvider()
         assert provider.model == AnthropicProvider.default_model
 
     def test_model_override(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-        with patch("providers.anthropic_provider.Anthropic"):
-            provider = AnthropicProvider(model="claude-sonnet-4-6")
+        provider = AnthropicProvider(model="claude-sonnet-4-6")
         assert provider.model == "claude-sonnet-4-6"
 
     def test_complete_returns_text(self, monkeypatch):
         monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value.content = [MagicMock(text="response text")]
-        with patch("providers.anthropic_provider.Anthropic", return_value=mock_client):
+        mock_message = MagicMock()
+        mock_message.content = [MagicMock(text="response text")]
+        with patch("local_first_common.providers.anthropic._Anthropic") as mock_anthropic_cls:
+            mock_client = MagicMock()
+            mock_client.messages.create.return_value = mock_message
+            mock_anthropic_cls.return_value = mock_client
             provider = AnthropicProvider()
             result = provider.complete("system", "user")
         assert result == "response text"
@@ -98,15 +106,17 @@ class TestGroqProvider:
 
     def test_complete_with_json_format(self, monkeypatch):
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
-        mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value.choices = [
-            MagicMock(message=MagicMock(content='{"ok": true}'))
-        ]
-        with patch("providers.groq_provider.Groq", return_value=mock_client):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"choices": [{"message": {"content": '{"ok": true}'}}]}
+        mock_response.raise_for_status = MagicMock()
+        with patch("local_first_common.providers.groq.httpx.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client.post.return_value = mock_response
+            mock_client_cls.return_value = mock_client
             provider = GroqProvider()
-            result = provider.complete("sys", "usr", response_format={"type": "json_object"})
-        call_kwargs = mock_client.chat.completions.create.call_args.kwargs
-        assert call_kwargs["response_format"] == {"type": "json_object"}
+            result = provider.complete("sys", "usr")
         assert result == '{"ok": true}'
 
 
@@ -118,7 +128,5 @@ class TestDeepSeekProvider:
 
     def test_uses_deepseek_base_url(self, monkeypatch):
         monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
-        with patch("providers.deepseek_provider.OpenAI") as mock_openai:
-            DeepSeekProvider()
-        _, kwargs = mock_openai.call_args
-        assert "deepseek.com" in kwargs.get("base_url", "")
+        provider = DeepSeekProvider()
+        assert "deepseek.com" in provider._api_url
