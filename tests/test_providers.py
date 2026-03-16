@@ -10,7 +10,7 @@ from local_first_common.providers.deepseek import DeepSeekProvider
 
 class TestProvidersRegistry:
     def test_all_expected_keys_present(self):
-        expected = {"ollama", "anthropic", "gemini", "groq", "deepseek"}
+        expected = {"ollama", "local", "anthropic", "gemini", "groq", "deepseek"}
         assert expected == set(PROVIDERS.keys())
 
     def test_all_values_are_base_provider_subclasses(self):
@@ -58,7 +58,6 @@ class TestOllamaProvider:
         assert "llama3.2" in models
 
     def test_known_models_returns_empty_on_error(self):
-        import httpx as _httpx
         with patch("local_first_common.providers.ollama.httpx.Client") as mock_client_cls:
             mock_client = MagicMock()
             mock_client.__enter__ = MagicMock(return_value=mock_client)

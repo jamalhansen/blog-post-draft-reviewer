@@ -1,5 +1,4 @@
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from typer.testing import CliRunner
@@ -62,7 +61,7 @@ class TestDryRun:
             mock_providers.__getitem__ = MagicMock(return_value=lambda model=None, **kw: mock_llm)
             mock_providers.__contains__ = MagicMock(return_value=True)
             mock_providers.keys.return_value = ["ollama"]
-            result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-n"])
+            runner.invoke(app, ["-f", SAMPLE_DRAFT, "-n"])
         mock_llm.complete.assert_not_called()
 
     def test_dry_run_prints_done(self):

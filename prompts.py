@@ -1,5 +1,3 @@
-import json
-from schema import ReviewResult
 
 def build_system_prompt(rubric_content: str) -> str:
     return f"""You are an expert technical blog post reviewer. Your goal is to review a blog post draft against a specific rubric and provide structured, actionable feedback.

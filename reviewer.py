@@ -1,12 +1,12 @@
 import json
 import os
-import sys
 from pathlib import Path
 from typing import Annotated, Optional
 
 import frontmatter
 import typer
 
+from local_first_common.llm import strip_json_fences
 from local_first_common.providers import PROVIDERS
 from rubric import load_rubric
 from schema import ReviewResult
@@ -92,16 +92,7 @@ def review(
                 parsed_json = raw_response
             else:
                 # Fallback: strip markdown code fences some models add
-                processed = str(raw_response).strip()
-                if processed.startswith("```json"):
-                    processed = processed[7:]
-                elif processed.startswith("```"):
-                    processed = processed[3:]
-                if processed.endswith("```"):
-                    processed = processed[:-3]
-                processed = processed.strip()
-
-                parsed_json = json.loads(processed)
+                parsed_json = json.loads(strip_json_fences(str(raw_response)))
                 if "ReviewResult" in parsed_json:
                     parsed_json = parsed_json["ReviewResult"]
 

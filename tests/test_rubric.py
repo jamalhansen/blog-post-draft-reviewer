@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from rubric import load_rubric
 
