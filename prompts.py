@@ -1,11 +1,13 @@
 
+from local_first_common.personas import get_brand_voice
+
+
 def build_system_prompt(rubric_content: str) -> str:
+    brand_voice = get_brand_voice()
     return f"""You are an expert technical blog post reviewer. Your goal is to review a blog post draft against a specific rubric and provide structured, actionable feedback.
 
 AUTHOR'S STYLE GOALS:
-- Conversational ("explaining to a dev friend over coffee")
-- Python analogies (if applicable)
-- No em dashes
+{brand_voice}
 - Helpful, not preachy
 - Specific and actionable feedback (quote the offending sentence/paragraph when flagging failure)
 

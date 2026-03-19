@@ -38,6 +38,8 @@ uv run reviewer.py -f examples/sample-draft.md -v
 
 ## CLI Reference
 
+All tools in this series share a common set of CLI flags for model management.
+
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--file` | `-f` | *(required)* | Path to the blog post markdown file |
@@ -45,17 +47,8 @@ uv run reviewer.py -f examples/sample-draft.md -v
 | `--model` | `-m` | provider default | Model name override |
 | `--output` | `-o` | `text` | Output format: `text` or `json` |
 | `--dry-run` | `-n` | off | Build prompts and show config without calling the LLM |
-| `--verbose` | `-v` | off | Print provider/model info and raw LLM response |
-
-### Provider defaults and API keys
-
-| Provider | Default model | Env var |
-|---|---|---|
-| `ollama` | `phi4-mini` | *(none — local)* |
-| `anthropic` | `claude-haiku-4-5-20251001` | `ANTHROPIC_API_KEY` |
-| `gemini` | `gemini-2.0-flash` | `GEMINI_API_KEY` or `GOOGLE_API_KEY` |
-| `groq` | `llama-3.3-70b-versatile` | `GROQ_API_KEY` |
-| `deepseek` | `deepseek-chat` | `DEEPSEEK_API_KEY` |
+| `--verbose` | `-v` | off | Print info messages and extra context |
+| `--debug` | `-d` | off | Show raw system/user prompts and raw LLM responses |
 
 ## Running Tests
 
@@ -65,29 +58,22 @@ uv run pytest
 
 ## Project Structure
 
+This tool follows the [Local-First AI project blueprint](https://github.com/jamalhansen/local-first-common).
+
 ```
 blog-post-draft-reviewer/
-├── reviewer.py          # CLI entry point
-├── providers/           # One class per LLM provider
-│   ├── __init__.py      # PROVIDERS registry dict
-│   ├── base.py          # Abstract BaseProvider
-│   ├── ollama_provider.py
-│   ├── anthropic_provider.py
-│   ├── gemini_provider.py
-│   ├── groq_provider.py
-│   └── deepseek_provider.py
+├── main.py              # Canonical entry point
+├── reviewer.py          # CLI command definitions
+├── logic.py             # Core processing logic
 ├── schema.py            # Pydantic output schema
-├── rubric.py            # Rubric loader
 ├── prompts.py           # Prompt builders
 ├── display.py           # Rich terminal output
+├── rubric.py            # Rubric loader
 ├── checklist.md         # The review rubric
-├── examples/
-│   └── sample-draft.md
+├── pyproject.toml       # Managed by uv
 └── tests/
     ├── fixtures/        # Sample data for tests
     ├── test_schema.py
-    ├── test_rubric.py
-    ├── test_prompts.py
-    ├── test_providers.py
-    └── test_reviewer.py
+    ├── test_reviewer.py # Integration tests via MockProvider
+    └── ...
 ```
