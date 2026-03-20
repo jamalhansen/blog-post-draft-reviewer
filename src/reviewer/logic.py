@@ -9,6 +9,7 @@ from local_first_common.llm import strip_json_fences
 from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
     dry_run_option,
+    no_llm_option,
     verbose_option,
     debug_option,
     resolve_provider,
@@ -59,11 +60,16 @@ def review(
     provider: Annotated[str, typer.Option("--provider", "-p", help="LLM provider.")] = "ollama",
     model: Annotated[Optional[str], typer.Option("--model", "-m", help="Model name.")] = None,
     output: Annotated[str, typer.Option("--output", "-o", help="Output format: text or json.")] = "text",
-    dry_run: Annotated[bool, dry_run_option()] = False,
-    verbose: Annotated[bool, verbose_option()] = False,
-    debug: Annotated[bool, debug_option()] = False,
+    dry_run: bool = dry_run_option(),
+    no_llm: bool = no_llm_option(),
+    verbose: bool = verbose_option(),
+    debug: bool = debug_option(),
 ):
     """Review a blog post draft against a rubric."""
+
+    # Standard behavior: no_llm implies dry_run
+    if no_llm:
+        dry_run = True
 
     # --- Fail fast: validate file exists ---
     if not file.exists():
@@ -77,7 +83,7 @@ def review(
         raise typer.Exit(code=1)
 
     try:
-        llm = resolve_provider(PROVIDERS, provider, model, debug=debug)
+        llm = resolve_provider(PROVIDERS, provider, model, debug=debug, no_llm=no_llm)
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
@@ -95,12 +101,12 @@ def review(
     system_prompt = build_system_prompt(rubric)
     user_prompt = build_user_prompt(content)
 
-    if dry_run:
+    if no_llm:
         typer.echo("\n--- System Prompt ---")
         typer.echo(system_prompt)
         typer.echo("\n--- User Prompt (first 500 chars) ---")
         typer.echo(user_prompt[:500])
-        typer.echo("\n[dry-run] No LLM call made.")
+        typer.echo("\n[no-llm] No LLM call made.")
         typer.echo("Done. Processed: 0, Skipped: 1")
         return
 
@@ -110,6 +116,9 @@ def review(
             typer.echo(result.model_dump_json(indent=2))
         else:
             display_review(result)
+
+        if dry_run:
+            typer.echo("\n[dry-run] Results printed to stdout. No files would be modified.")
 
         typer.echo("Done. Processed: 1, Skipped: 0")
 

@@ -38,17 +38,18 @@ uv run python src/main.py -f examples/sample-draft.md -v
 
 ## CLI Reference
 
-All tools in this series share a common set of CLI flags for model management via [local-first-common](https://github.com/jamalhansen/local-first-common).
+All tools in this series share a common set of CLI flags for model management. See the [Standard CLI Parameters](https://github.com/jamalhansen/local-first-common/blob/main/STANDARDS.md) for full details.
 
-| Flag | Short | Default | Description |
-|---|---|---|---|
-| `--file` | `-f` | *(required)* | Path to the blog post markdown file |
-| `--provider` | `-p` | `ollama` | LLM provider (`ollama`, `anthropic`, `gemini`, `groq`, `deepseek`) |
-| `--model` | `-m` | provider default | Model name override |
-| `--output` | `-o` | `text` | Output format: `text` or `json` |
-| `--dry-run` | `-n` | off | Build prompts and show config without calling the LLM |
-| `--verbose` | `-v` | off | Print info messages and extra context |
-| `--debug` | `-d` | off | Show raw system/user prompts and raw LLM responses |
+| Flag | Short | Description |
+|---|---|---|
+| `--file` | `-f` | Path to the blog post markdown file |
+| `--provider` | `-p` | LLM provider (`ollama`, `anthropic`, `gemini`, `groq`, `deepseek`) |
+| `--model` | `-m` | Model name override (supports aliases like `@fast`, `@best`) |
+| `--output` | `-o` | Output format: `text` or `json` |
+| `--dry-run` | `-n` | Call LLM but do not save results. Print to stdout. |
+| `--no-llm` | | Skip LLM call and use mock responses. Implies `--dry-run`. |
+| `--verbose` | `-v` | Print info messages and extra context |
+| `--debug` | `-d` | Show raw system/user prompts and raw LLM responses |
 
 ## Running Tests
 

@@ -54,11 +54,19 @@ class TestCLIFlags:
 
 
 class TestDryRun:
-    def test_dry_run_skips_llm(self):
+    def test_dry_run_calls_llm(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
         with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
             runner.invoke(app, ["-f", SAMPLE_DRAFT, "-n"])
+        assert len(mock_llm.calls) == 1
+
+    def test_no_llm_skips_llm(self):
+        runner = CliRunner()
+        mock_llm = MockProvider(response=VALID_RESPONSE)
+        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+            runner.invoke(app, ["-f", SAMPLE_DRAFT, "--no-llm"])
+        # In reviewer, --no-llm logic is implemented in logic.py to return early
         assert len(mock_llm.calls) == 0
 
     def test_dry_run_prints_done(self):
