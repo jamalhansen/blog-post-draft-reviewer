@@ -18,27 +18,27 @@ uv sync
 
 ```bash
 # Review with the default local provider (Ollama, phi4-mini)
-uv run reviewer.py -f examples/sample-draft.md
+uv run python src/main.py -f examples/sample-draft.md
 
 # Use Anthropic (requires ANTHROPIC_API_KEY)
-uv run reviewer.py -f examples/sample-draft.md -p anthropic
+uv run python src/main.py -f examples/sample-draft.md -p anthropic
 
 # Override the model
-uv run reviewer.py -f examples/sample-draft.md -p anthropic -m claude-sonnet-4-6
+uv run python src/main.py -f examples/sample-draft.md -p anthropic -m claude-3-5-sonnet-latest
 
 # Output raw JSON
-uv run reviewer.py -f examples/sample-draft.md -o json
+uv run python src/main.py -f examples/sample-draft.md -o json
 
 # Dry-run: build prompts without calling the LLM
-uv run reviewer.py -f examples/sample-draft.md -n
+uv run python src/main.py -f examples/sample-draft.md -n
 
 # Verbose: show provider, model, and raw LLM response
-uv run reviewer.py -f examples/sample-draft.md -v
+uv run python src/main.py -f examples/sample-draft.md -v
 ```
 
 ## CLI Reference
 
-All tools in this series share a common set of CLI flags for model management.
+All tools in this series share a common set of CLI flags for model management via [local-first-common](https://github.com/jamalhansen/local-first-common).
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
@@ -62,18 +62,16 @@ This tool follows the [Local-First AI project blueprint](https://github.com/jama
 
 ```
 blog-post-draft-reviewer/
-├── main.py              # Canonical entry point
-├── reviewer.py          # CLI command definitions
-├── logic.py             # Core processing logic
-├── schema.py            # Pydantic output schema
-├── prompts.py           # Prompt builders
-├── display.py           # Rich terminal output
-├── rubric.py            # Rubric loader
+├── src/
+│   ├── main.py          # Typer CLI entry point
+│   ├── logic.py         # Core processing logic
+│   ├── schema.py        # Pydantic output models
+│   ├── prompts.py       # System and user prompt builders
+│   ├── display.py       # Rich-based terminal formatting
+│   └── rubric.py        # Rubric loading and parsing
 ├── checklist.md         # The review rubric
 ├── pyproject.toml       # Managed by uv
 └── tests/
-    ├── fixtures/        # Sample data for tests
-    ├── test_schema.py
-    ├── test_reviewer.py # Integration tests via MockProvider
+    ├── test_main.py     # CLI integration tests via MockProvider
     └── ...
 ```
