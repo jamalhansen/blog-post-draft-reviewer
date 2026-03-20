@@ -1,5 +1,5 @@
 from pathlib import Path
-from rubric import load_rubric
+from reviewer.rubric import load_rubric
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

@@ -1,5 +1,5 @@
 import pytest
-from schema import ReviewResult, ChecklistItem
+from reviewer.schema import ReviewResult, ChecklistItem
 
 
 class TestChecklistItem:

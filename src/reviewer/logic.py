@@ -13,10 +13,10 @@ from local_first_common.cli import (
     debug_option,
     resolve_provider,
 )
-from rubric import load_rubric
-from schema import ReviewResult
-from prompts import build_system_prompt, build_user_prompt
-from display import display_review
+from .rubric import load_rubric
+from .schema import ReviewResult
+from .prompts import build_system_prompt, build_user_prompt
+from .display import display_review
 
 app = typer.Typer()
 

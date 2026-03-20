@@ -1,4 +1,4 @@
-from prompts import build_system_prompt, build_user_prompt
+from reviewer.prompts import build_system_prompt, build_user_prompt
 
 
 class TestBuildSystemPrompt:
