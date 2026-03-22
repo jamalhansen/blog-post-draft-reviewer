@@ -115,6 +115,8 @@ def review(
         with timed_run("blog-post-draft-reviewer", llm.model, source_location=str(file)) as run:
             result = review_post(llm, system_prompt, user_prompt, verbose=verbose)
             run.item_count = 1
+            run.input_tokens = getattr(llm, "input_tokens", None) or None
+            run.output_tokens = getattr(llm, "output_tokens", None) or None
         if output == "json":
             typer.echo(result.model_dump_json(indent=2))
         else:
