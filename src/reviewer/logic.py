@@ -14,6 +14,7 @@ from local_first_common.cli import (
     debug_option,
     resolve_provider,
 )
+from local_first_common.tracking import timed_run
 from .rubric import load_rubric
 from .schema import ReviewResult
 from .prompts import build_system_prompt, build_user_prompt
@@ -111,7 +112,9 @@ def review(
         return
 
     try:
-        result = review_post(llm, system_prompt, user_prompt, verbose=verbose)
+        with timed_run("blog-post-draft-reviewer", llm.model, source_location=str(file)) as run:
+            result = review_post(llm, system_prompt, user_prompt, verbose=verbose)
+            run.item_count = 1
         if output == "json":
             typer.echo(result.model_dump_json(indent=2))
         else:
