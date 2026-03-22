@@ -14,11 +14,13 @@ from local_first_common.cli import (
     debug_option,
     resolve_provider,
 )
-from local_first_common.tracking import timed_run
+from local_first_common.tracking import register_tool, timed_run
 from .rubric import load_rubric
 from .schema import ReviewResult
 from .prompts import build_system_prompt, build_user_prompt
 from .display import display_review
+
+_TOOL = register_tool("blog-post-draft-reviewer")
 
 app = typer.Typer()
 
