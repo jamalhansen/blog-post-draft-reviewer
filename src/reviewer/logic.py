@@ -74,15 +74,6 @@ def review(
     system_prompt = build_system_prompt(rubric)
     user_prompt = build_user_prompt(content)
 
-    if no_llm:
-        typer.echo("\n--- System Prompt ---")
-        typer.echo(system_prompt)
-        typer.echo("\n--- User Prompt (first 500 chars) ---")
-        typer.echo(user_prompt[:500])
-        typer.echo("\n[no-llm] No LLM call made.")
-        typer.echo("Done. Processed: 0, Skipped: 1")
-        return
-
     try:
         with timed_run("blog-post-draft-reviewer", llm.model, source_location=str(file)) as run:
             result = review_post(llm, system_prompt, user_prompt, verbose=verbose)

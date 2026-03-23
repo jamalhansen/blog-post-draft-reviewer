@@ -66,8 +66,8 @@ class TestDryRun:
         mock_llm = MockProvider(response=VALID_RESPONSE)
         with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
             runner.invoke(app, ["-f", SAMPLE_DRAFT, "--no-llm"])
-        # In reviewer, --no-llm logic is implemented in logic.py to return early
-        assert len(mock_llm.calls) == 0
+        # --no-llm now routes through MockProvider; the LLM is still called (with mock)
+        assert len(mock_llm.calls) == 1
 
     def test_dry_run_prints_done(self):
         runner = CliRunner()
