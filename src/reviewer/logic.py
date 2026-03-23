@@ -1,11 +1,9 @@
-import json
 from pathlib import Path
 from typing import Annotated, Optional
 
 import frontmatter
 import typer
 
-from local_first_common.llm import strip_json_fences
 from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
     dry_run_option,
@@ -13,6 +11,7 @@ from local_first_common.cli import (
     verbose_option,
     debug_option,
     resolve_provider,
+    resolve_dry_run,
 )
 from local_first_common.tracking import register_tool, timed_run
 from .rubric import load_rubric
@@ -26,36 +25,9 @@ app = typer.Typer()
 
 def review_post(llm, system_prompt: str, user_prompt: str, verbose: bool = False) -> ReviewResult:
     """Core logic to call LLM and parse the review result."""
-    current_user_prompt = user_prompt
-    raw_response = None
-    
-    for attempt in range(2):
-        try:
-            raw_response = llm.complete(system_prompt, current_user_prompt, response_model=ReviewResult)
-
-            if verbose:
-                typer.echo("\n--- Raw LLM Response ---")
-                typer.echo(raw_response)
-
-            # The new complete() with response_model returns a dict directly
-            if isinstance(raw_response, dict):
-                parsed_json = raw_response
-            else:
-                # Fallback: strip markdown code fences some models add
-                parsed_json = json.loads(strip_json_fences(str(raw_response)))
-                if "ReviewResult" in parsed_json:
-                    parsed_json = parsed_json["ReviewResult"]
-
-            return ReviewResult.model_validate(parsed_json)
-
-        except Exception as e:
-            if attempt == 0:
-                current_user_prompt += (
-                    f"\n\nERROR FROM PREVIOUS ATTEMPT:\n{e}\n\n"
-                    "Please ensure your response is a valid JSON object matching the required schema exactly."
-                )
-                continue
-            raise RuntimeError(f"Error parsing LLM response after 2 attempts: {e}")
+    # complete() now handles retries and validation automatically
+    result = llm.complete(system_prompt, user_prompt, response_model=ReviewResult)
+    return ReviewResult.model_validate(result)
 
 @app.command()
 def review(
@@ -70,9 +42,7 @@ def review(
 ):
     """Review a blog post draft against a rubric."""
 
-    # Standard behavior: no_llm implies dry_run
-    if no_llm:
-        dry_run = True
+    dry_run = resolve_dry_run(dry_run, no_llm)
 
     # --- Fail fast: validate file exists ---
     if not file.exists():
