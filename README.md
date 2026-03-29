@@ -16,8 +16,13 @@ uv sync
 
 ## Usage
 
+The installed entry point is `review-draft`. After `uv sync`:
+
 ```bash
 # Review with the default local provider (Ollama, phi4-mini)
+review-draft -f examples/sample-draft.md
+
+# Or via uv run:
 uv run python src/main.py -f examples/sample-draft.md
 
 # Use Anthropic (requires ANTHROPIC_API_KEY)
