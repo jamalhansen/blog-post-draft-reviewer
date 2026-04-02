@@ -20,25 +20,22 @@ The installed entry point is `review-draft`. After `uv sync`:
 
 ```bash
 # Review with the default local provider (Ollama, phi4-mini)
-review-draft -f examples/sample-draft.md
-
-# Or via uv run:
-uv run python src/main.py -f examples/sample-draft.md
+uv run review-draft -f examples/sample-draft.md
 
 # Use Anthropic (requires ANTHROPIC_API_KEY)
-uv run python src/main.py -f examples/sample-draft.md -p anthropic
+uv run review-draft -f examples/sample-draft.md -p anthropic
 
 # Override the model
-uv run python src/main.py -f examples/sample-draft.md -p anthropic -m claude-3-5-sonnet-latest
+uv run review-draft -f examples/sample-draft.md -p anthropic -m claude-3-5-sonnet-latest
 
 # Output raw JSON
-uv run python src/main.py -f examples/sample-draft.md -o json
+uv run review-draft -f examples/sample-draft.md -o json
 
 # Dry-run: build prompts without calling the LLM
-uv run python src/main.py -f examples/sample-draft.md -n
+uv run review-draft -f examples/sample-draft.md -n
 
 # Verbose: show provider, model, and raw LLM response
-uv run python src/main.py -f examples/sample-draft.md -v
+uv run review-draft -f examples/sample-draft.md -v
 ```
 
 ## CLI Reference
