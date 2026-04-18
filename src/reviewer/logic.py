@@ -1,3 +1,5 @@
+from local_first_common.config import get_setting
+
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -13,8 +15,9 @@ from local_first_common.cli import (
     debug_option,
     resolve_provider,
     resolve_dry_run,
+    provider_option,
+    model_option,
 )
-from local_first_common.config import get_setting
 from local_first_common.tracking import register_tool, timed_run
 from .rubric import load_rubric
 from .schema import ReviewResult
@@ -22,7 +25,8 @@ from .prompts import build_system_prompt, build_user_prompt
 from .display import display_review
 
 TOOL_NAME = "blog-post-draft-reviewer"
-DEFAULTS = {'provider': 'ollama', 'model': 'llama3'}
+DEFAULTS = {"provider": "ollama", "model": "llama3"}
+_TOOL = register_tool(TOOL_NAME)
 
 _TOOL = register_tool("blog-post-draft-reviewer")
 
@@ -37,18 +41,23 @@ def review_post(llm, system_prompt: str, user_prompt: str, verbose: bool = False
 @app.command()
 def review(
     file: Annotated[Path, typer.Option("--file", "-f", help="Path to blog post markdown file.")],
-    provider: Annotated[str, typer.Option("--provider", "-p", help="LLM provider.")] = "ollama",
-    model: Annotated[Optional[str], typer.Option("--model", "-m", help="Model name.")] = None,
+    provider: Annotated[str, provider_option()] = "ollama",
+    model: Annotated[Optional[str], model_option()] = None,
     output: Annotated[str, typer.Option("--output", "-o", help="Output format: text or json.")] = "text",
-    dry_run: bool = dry_run_option(),
-    no_llm: bool = no_llm_option(),
-    verbose: bool = verbose_option(),
-    debug: bool = debug_option(),
-    init_config: bool = init_config_option(TOOL_NAME, DEFAULTS),
+    dry_run: Annotated[bool, dry_run_option()] = False,
+    no_llm: Annotated[bool, no_llm_option()] = False,
+    verbose: Annotated[bool, verbose_option()] = False,
+    debug: Annotated[bool, debug_option()] = False,
+    init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ):
     """Review a blog post draft against a rubric."""
-    actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
-    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+    try:
+        actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+        actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+        llm = resolve_provider(PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm)
+    except Exception as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
     dry_run = resolve_dry_run(dry_run, no_llm)
 
@@ -63,21 +72,13 @@ def review(
         typer.secho("Error: checklist.md not found in the current directory.", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
-    try:
-        actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
-    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
-    llm = resolve_provider(PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm)
-    except Exception as e:
-        typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
-
     with open(file) as f:
         post_data = frontmatter.load(f)
         content = post_data.content
 
     if verbose:
         typer.echo(f"Provider : {actual_provider}")
-        typer.echo(f"Model    : {actual_model}")
+        typer.echo(f"Model    : {llm.model}")
         typer.echo(f"File     : {file}")
         typer.echo(f"Output   : {output}")
 
