@@ -6,6 +6,7 @@ import typer
 
 from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
+    init_config_option,
     dry_run_option,
     no_llm_option,
     verbose_option,
@@ -13,11 +14,15 @@ from local_first_common.cli import (
     resolve_provider,
     resolve_dry_run,
 )
+from local_first_common.config import get_setting
 from local_first_common.tracking import register_tool, timed_run
 from .rubric import load_rubric
 from .schema import ReviewResult
 from .prompts import build_system_prompt, build_user_prompt
 from .display import display_review
+
+TOOL_NAME = "blog-post-draft-reviewer"
+DEFAULTS = {'provider': 'ollama', 'model': 'llama3'}
 
 _TOOL = register_tool("blog-post-draft-reviewer")
 
@@ -39,8 +44,11 @@ def review(
     no_llm: bool = no_llm_option(),
     verbose: bool = verbose_option(),
     debug: bool = debug_option(),
+    init_config: bool = init_config_option(TOOL_NAME, DEFAULTS),
 ):
     """Review a blog post draft against a rubric."""
+    actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
 
     dry_run = resolve_dry_run(dry_run, no_llm)
 
@@ -56,7 +64,9 @@ def review(
         raise typer.Exit(code=1)
 
     try:
-        llm = resolve_provider(PROVIDERS, provider, model, debug=debug, no_llm=no_llm)
+        actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+    llm = resolve_provider(PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm)
     except Exception as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
@@ -66,8 +76,8 @@ def review(
         content = post_data.content
 
     if verbose:
-        typer.echo(f"Provider : {provider}")
-        typer.echo(f"Model    : {llm.model}")
+        typer.echo(f"Provider : {actual_provider}")
+        typer.echo(f"Model    : {actual_model}")
         typer.echo(f"File     : {file}")
         typer.echo(f"Output   : {output}")
 
