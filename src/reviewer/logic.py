@@ -32,18 +32,65 @@ _TOOL = register_tool("blog-post-draft-reviewer")
 
 app = typer.Typer()
 
-def review_post(llm, system_prompt: str, user_prompt: str, verbose: bool = False) -> ReviewResult:
+
+class BlogPostReviewerError(Exception):
+    """Base error for strict blog-post reviewer operations."""
+
+
+class ProviderResolutionError(BlogPostReviewerError):
+    """Raised when provider/model resolution fails."""
+
+
+class ReviewExecutionError(BlogPostReviewerError):
+    """Raised when the review call or parsing fails."""
+
+
+def review_post(
+    llm, system_prompt: str, user_prompt: str, verbose: bool = False
+) -> ReviewResult:
     """Core logic to call LLM and parse the review result."""
     # complete() now handles retries and validation automatically
     result = llm.complete(system_prompt, user_prompt, response_model=ReviewResult)
     return ReviewResult.model_validate(result)
 
+
+def resolve_llm_or_raise(
+    provider: str, model: Optional[str], debug: bool, no_llm: bool
+):
+    """Resolve LLM provider or raise typed error."""
+    actual_provider = get_setting(
+        TOOL_NAME, "provider", cli_val=provider, default="ollama"
+    )
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+    try:
+        llm = resolve_provider(
+            PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
+        )
+    except Exception as e:  # noqa: BLE001
+        raise ProviderResolutionError(str(e)) from e
+    return actual_provider, actual_model, llm
+
+
+def review_post_or_raise(
+    llm, system_prompt: str, user_prompt: str, verbose: bool = False
+) -> ReviewResult:
+    """Run review call and raise typed error on failure."""
+    try:
+        return review_post(llm, system_prompt, user_prompt, verbose=verbose)
+    except Exception as e:  # noqa: BLE001
+        raise ReviewExecutionError(str(e)) from e
+
+
 @app.command()
 def review(
-    file: Annotated[Path, typer.Option("--file", "-f", help="Path to blog post markdown file.")],
+    file: Annotated[
+        Path, typer.Option("--file", "-f", help="Path to blog post markdown file.")
+    ],
     provider: Annotated[str, provider_option()] = "ollama",
     model: Annotated[Optional[str], model_option()] = None,
-    output: Annotated[str, typer.Option("--output", "-o", help="Output format: text or json.")] = "text",
+    output: Annotated[
+        str, typer.Option("--output", "-o", help="Output format: text or json.")
+    ] = "text",
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: Annotated[bool, verbose_option()] = False,
@@ -52,10 +99,10 @@ def review(
 ):
     """Review a blog post draft against a rubric."""
     try:
-        actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
-        actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
-        llm = resolve_provider(PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm)
-    except Exception as e:
+        actual_provider, actual_model, llm = resolve_llm_or_raise(
+            provider, model, debug, no_llm
+        )
+    except ProviderResolutionError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
@@ -69,7 +116,11 @@ def review(
     # --- Fail fast: validate rubric ---
     rubric = load_rubric()
     if rubric == "Rubric not found.":
-        typer.secho("Error: checklist.md not found in the current directory.", fg=typer.colors.RED, err=True)
+        typer.secho(
+            "Error: checklist.md not found in the current directory.",
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(code=1)
 
     with open(file) as f:
@@ -86,8 +137,12 @@ def review(
     user_prompt = build_user_prompt(content)
 
     try:
-        with timed_run("blog-post-draft-reviewer", llm.model, source_location=str(file)) as run:
-            result = review_post(llm, system_prompt, user_prompt, verbose=verbose)
+        with timed_run(
+            "blog-post-draft-reviewer", llm.model, source_location=str(file)
+        ) as run:
+            result = review_post_or_raise(
+                llm, system_prompt, user_prompt, verbose=verbose
+            )
             run.item_count = 1
             run.input_tokens = getattr(llm, "input_tokens", None) or None
             run.output_tokens = getattr(llm, "output_tokens", None) or None
@@ -97,14 +152,16 @@ def review(
             display_review(result)
 
         if dry_run:
-            typer.echo("\n[dry-run] Results printed to stdout. No files would be modified.")
+            typer.echo(
+                "\n[dry-run] Results printed to stdout. No files would be modified."
+            )
 
         typer.echo("Done. Processed: 1, Skipped: 0")
 
         if result.overall == "fail":
             raise typer.Exit(code=1)
 
-    except Exception as e:
+    except ReviewExecutionError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         typer.echo("Done. Processed: 0, Skipped: 1")
         raise typer.Exit(code=1)

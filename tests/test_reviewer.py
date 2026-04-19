@@ -1,23 +1,34 @@
 import json
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 from typer.testing import CliRunner
+
 from reviewer.logic import app
+from reviewer.logic import (
+    ProviderResolutionError,
+    ReviewExecutionError,
+    resolve_llm_or_raise,
+    review_post_or_raise,
+)
 from local_first_common.testing import MockProvider
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SAMPLE_DRAFT = str(FIXTURES / "sample-draft.md")
 
-VALID_RESPONSE = json.dumps({
-    "overall": "fail",
-    "word_count": 150,
-    "post_type": "manifesto",
-    "items": [
-        {"category": "Hook & Opening", "status": "fail", "note": "No hook."},
-        {"category": "Tone", "status": "fail", "note": "Preachy."},
-    ],
-    "summary": "Post needs significant work on tone and structure.",
-})
+VALID_RESPONSE = json.dumps(
+    {
+        "overall": "fail",
+        "word_count": 150,
+        "post_type": "manifesto",
+        "items": [
+            {"category": "Hook & Opening", "status": "fail", "note": "No hook."},
+            {"category": "Tone", "status": "fail", "note": "Preachy."},
+        ],
+        "summary": "Post needs significant work on tone and structure.",
+    }
+)
 
 
 class TestCLIFlags:
@@ -82,7 +93,9 @@ class TestReviewRun:
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
         with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
-            result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-o", "json"])
+            result = runner.invoke(
+                app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-o", "json"]
+            )
         assert result.exit_code == 1  # overall=fail -> exit 1
         output_json = json.loads(result.output.split("Done.")[0])
         assert output_json["overall"] == "fail"
@@ -91,18 +104,42 @@ class TestReviewRun:
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
         with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
-            result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-o", "json"])
+            result = runner.invoke(
+                app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-o", "json"]
+            )
         assert "Done." in result.output
 
     def test_verbose_shows_model(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE, model="phi4-mini")
         with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
-            result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-v", "-o", "json"])
+            result = runner.invoke(
+                app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-v", "-o", "json"]
+            )
         assert "phi4-mini" in result.output
 
     def test_provider_runtime_error_exits_cleanly(self):
         runner = CliRunner()
-        with patch("reviewer.logic.resolve_provider", side_effect=RuntimeError("GROQ_API_KEY not set.")):
+        with patch(
+            "reviewer.logic.resolve_provider",
+            side_effect=RuntimeError("GROQ_API_KEY not set."),
+        ):
             result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-p", "groq"])
         assert result.exit_code == 1
+
+
+class TestStrictHelpers:
+    def test_resolve_llm_or_raise_wraps_errors(self):
+        with patch(
+            "reviewer.logic.resolve_provider", side_effect=RuntimeError("no key")
+        ):
+            with pytest.raises(ProviderResolutionError, match="no key"):
+                resolve_llm_or_raise("groq", None, False, False)
+
+    def test_review_post_or_raise_wraps_errors(self):
+        mock_llm = MockProvider(response=VALID_RESPONSE)
+        with patch(
+            "reviewer.logic.review_post", side_effect=RuntimeError("bad response")
+        ):
+            with pytest.raises(ReviewExecutionError, match="bad response"):
+                review_post_or_raise(mock_llm, "system", "user")
