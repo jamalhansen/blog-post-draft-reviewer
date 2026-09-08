@@ -5,8 +5,8 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from reviewer.logic import app
-from reviewer.logic import (
+from reviewer.cli import app
+from reviewer.cli import (
     ProviderResolutionError,
     ReviewExecutionError,
     resolve_llm_or_raise,
@@ -68,14 +68,14 @@ class TestDryRun:
     def test_dry_run_calls_llm(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
-        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+        with patch("reviewer.cli.resolve_provider", return_value=mock_llm):
             runner.invoke(app, ["-f", SAMPLE_DRAFT, "-n"])
         assert len(mock_llm.calls) == 1
 
     def test_no_llm_skips_llm(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
-        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+        with patch("reviewer.cli.resolve_provider", return_value=mock_llm):
             runner.invoke(app, ["-f", SAMPLE_DRAFT, "--no-llm"])
         # --no-llm now routes through MockProvider; the LLM is still called (with mock)
         assert len(mock_llm.calls) == 1
@@ -83,7 +83,7 @@ class TestDryRun:
     def test_dry_run_prints_done(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
-        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+        with patch("reviewer.cli.resolve_provider", return_value=mock_llm):
             result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-n"])
         assert "dry-run" in result.output.lower() or "Skipped" in result.output
 
@@ -92,7 +92,7 @@ class TestReviewRun:
     def test_json_output(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
-        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+        with patch("reviewer.cli.resolve_provider", return_value=mock_llm):
             result = runner.invoke(
                 app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-o", "json"]
             )
@@ -103,7 +103,7 @@ class TestReviewRun:
     def test_summary_line_printed(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE)
-        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+        with patch("reviewer.cli.resolve_provider", return_value=mock_llm):
             result = runner.invoke(
                 app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-o", "json"]
             )
@@ -112,7 +112,7 @@ class TestReviewRun:
     def test_verbose_shows_model(self):
         runner = CliRunner()
         mock_llm = MockProvider(response=VALID_RESPONSE, model="phi4-mini")
-        with patch("reviewer.logic.resolve_provider", return_value=mock_llm):
+        with patch("reviewer.cli.resolve_provider", return_value=mock_llm):
             result = runner.invoke(
                 app, ["-f", SAMPLE_DRAFT, "-p", "ollama", "-v", "-o", "json"]
             )
@@ -121,7 +121,7 @@ class TestReviewRun:
     def test_provider_runtime_error_exits_cleanly(self):
         runner = CliRunner()
         with patch(
-            "reviewer.logic.resolve_provider",
+            "reviewer.cli.resolve_provider",
             side_effect=RuntimeError("GROQ_API_KEY not set."),
         ):
             result = runner.invoke(app, ["-f", SAMPLE_DRAFT, "-p", "groq"])
@@ -131,7 +131,7 @@ class TestReviewRun:
 class TestStrictHelpers:
     def test_resolve_llm_or_raise_wraps_errors(self):
         with patch(
-            "reviewer.logic.resolve_provider", side_effect=RuntimeError("no key")
+            "reviewer.cli.resolve_provider", side_effect=RuntimeError("no key")
         ):
             with pytest.raises(ProviderResolutionError, match="no key"):
                 resolve_llm_or_raise("groq", None, False, False)
@@ -139,7 +139,7 @@ class TestStrictHelpers:
     def test_review_post_or_raise_wraps_errors(self):
         mock_llm = MockProvider(response=VALID_RESPONSE)
         with patch(
-            "reviewer.logic.review_post", side_effect=RuntimeError("bad response")
+            "reviewer.cli.review_post", side_effect=RuntimeError("bad response")
         ):
             with pytest.raises(ReviewExecutionError, match="bad response"):
                 review_post_or_raise(mock_llm, "system", "user")

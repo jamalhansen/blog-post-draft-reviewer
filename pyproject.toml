@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-review-draft = "reviewer.logic:app"
+review-draft = "reviewer.cli:app"
 
 [build-system]
 requires = ["hatchling"]

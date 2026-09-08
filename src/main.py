@@ -1,4 +1,4 @@
-from reviewer.logic import app
+from reviewer.cli import app
 
 if __name__ == "__main__":
     app()
