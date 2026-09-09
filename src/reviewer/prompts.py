@@ -2,14 +2,25 @@
 from local_first_common.personas import get_brand_voice
 
 
-def build_system_prompt(rubric_content: str) -> str:
+def build_system_prompt(rubric_content: str, vault_context: str | None = None) -> str:
     brand_voice = get_brand_voice()
+    context_section = ""
+    if vault_context:
+        context_section = f"""
+
+AUTHOR'S RELATED VAULT NOTES (BACKGROUND CONTEXT):
+{vault_context}
+
+CONTINUITY & CONTEXT GUIDELINES:
+- Assess whether this post is consistent with the author's related notes/series.
+- Suggest cross-links or continuity callbacks if this post references topics covered in earlier notes.
+"""
     return f"""You are an expert technical blog post reviewer. Your goal is to review a blog post draft against a specific rubric and provide structured, actionable feedback.
 
 AUTHOR'S STYLE GOALS:
 {brand_voice}
 - Helpful, not preachy
-- Specific and actionable feedback (quote the offending sentence/paragraph when flagging failure)
+- Specific and actionable feedback (quote the offending sentence/paragraph when flagging failure){context_section}
 
 RUBRIC:
 {rubric_content}

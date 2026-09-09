@@ -23,6 +23,7 @@ from .rubric import load_rubric
 from .schema import ReviewResult
 from .prompts import build_system_prompt, build_user_prompt
 from .display import display_review
+from .context import format_vault_context, get_vault_context
 from .core import ProviderResolutionError, ReviewExecutionError, review_post
 
 TOOL_NAME = "blog-post-draft-reviewer"
@@ -71,6 +72,13 @@ def review(
     output: Annotated[
         str, typer.Option("--output", "-o", help="Output format: text or json.")
     ] = "text",
+    vault_context: Annotated[
+        bool,
+        typer.Option(
+            "--vault-context/--no-vault-context",
+            help="Inject related vault notes as context.",
+        ),
+    ] = True,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: Annotated[bool, verbose_option()] = False,
@@ -113,7 +121,19 @@ def review(
         typer.echo(f"File     : {file}")
         typer.echo(f"Output   : {output}")
 
-    system_prompt = build_system_prompt(rubric)
+    vault_context_str = None
+    if vault_context:
+        title = post_data.metadata.get("title", "")
+        related = get_vault_context(title, content, current_file=file)
+        if related:
+            vault_context_str = format_vault_context(related)
+            if verbose:
+                typer.secho(
+                    f"Found {len(related)} related vault notes for context.",
+                    dim=True,
+                )
+
+    system_prompt = build_system_prompt(rubric, vault_context=vault_context_str)
     user_prompt = build_user_prompt(content)
 
     try:

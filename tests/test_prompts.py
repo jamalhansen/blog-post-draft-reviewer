@@ -17,6 +17,16 @@ class TestBuildSystemPrompt:
         assert isinstance(prompt, str)
         assert len(prompt) > 0
 
+    def test_includes_vault_context(self):
+        context = "1. Note: `notes/sql.md`\n   \"Prior discussion on NULLs.\""
+        prompt = build_system_prompt("rubric", vault_context=context)
+        assert "AUTHOR'S RELATED VAULT NOTES" in prompt
+        assert "notes/sql.md" in prompt
+
+    def test_omits_vault_context_when_none(self):
+        prompt = build_system_prompt("rubric", vault_context=None)
+        assert "AUTHOR'S RELATED VAULT NOTES" not in prompt
+
 
 class TestBuildUserPrompt:
     def test_includes_content(self):
