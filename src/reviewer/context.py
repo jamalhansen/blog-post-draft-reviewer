@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sqlite3
@@ -109,3 +110,92 @@ def format_vault_context(context_items: list[dict]) -> str:
         bc = f" (Section: {item['breadcrumb']})" if item.get("breadcrumb") else ""
         lines.append(f"{i}. Note: `{src}`{bc}\n   \"{item['snippet']}\"")
     return "\n\n".join(lines)
+
+
+def get_discovery_db_path() -> Path:
+    """Return path to content-discovery SQLite database."""
+    env = os.environ.get("CONTENT_DISCOVERY_STORE") or os.environ.get("CONTENT_DISCOVERY_DB")
+    if env:
+        return Path(os.path.expanduser(env))
+    return Path.home() / ".content-discovery.db"
+
+
+def get_discovery_context(
+    title: str,
+    content: str,
+    top_k: int = 3,
+    db_path: Optional[Path] = None,
+) -> list[dict]:
+    """Retrieve relevant kept research items from content-discovery archive."""
+    path = db_path or get_discovery_db_path()
+    if not path.exists():
+        return []
+
+    search_text = extract_search_terms(title, content)
+    if not search_text:
+        return []
+
+    words = [w.lower() for w in re.findall(r"\b[A-Za-z]{4,}\b", search_text)[:15]]
+    if not words:
+        return []
+
+    try:
+        conn = sqlite3.connect(str(path))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT title, url, summary, source, tags, description
+            FROM items
+            WHERE status = 'kept'
+            ORDER BY reviewed_at DESC
+            """
+        ).fetchall()
+        conn.close()
+    except Exception:
+        return []
+
+    matched: list[dict] = []
+    for r in rows:
+        item = dict(r)
+        item_tags: list[str] = []
+        try:
+            item_tags = [
+                str(t).strip().lower()
+                for t in json.loads(item.get("tags") or "[]")
+            ]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        searchable = " ".join([
+            item.get("title") or "",
+            item.get("summary") or "",
+            item.get("description") or "",
+            item.get("source") or "",
+            " ".join(item_tags),
+        ]).lower()
+
+        overlap = sum(1 for w in words if w in searchable)
+        if overlap > 0:
+            matched.append(
+                {
+                    "title": item.get("title") or "",
+                    "url": item.get("url") or "",
+                    "summary": item.get("summary") or item.get("description") or "",
+                    "tags": item_tags,
+                    "score": overlap,
+                }
+            )
+
+    matched.sort(key=lambda x: x["score"], reverse=True)
+    return matched[:top_k]
+
+
+def format_discovery_context(items: list[dict]) -> str:
+    """Format discovery context items into prompt markdown."""
+    if not items:
+        return ""
+    lines = []
+    for i, item in enumerate(items, start=1):
+        tag_str = f" [#{', #'.join(item['tags'])}]" if item.get("tags") else ""
+        lines.append(f"{i}. [{item['title']}]({item['url']}){tag_str}\n   \"{item['summary']}\"")
+    return "\n\n".join(lines)
+

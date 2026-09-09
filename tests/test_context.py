@@ -7,7 +7,9 @@ import pytest
 
 from reviewer.context import (
     extract_search_terms,
+    format_discovery_context,
     format_vault_context,
+    get_discovery_context,
     get_vault_context,
 )
 
@@ -108,3 +110,85 @@ class TestFormatVaultContext:
         assert "notes/sql.md" in formatted
         assert "NULL section" in formatted
         assert "Snippet content here" in formatted
+
+
+class TestGetDiscoveryContext:
+    def test_returns_empty_if_db_missing(self, tmp_path):
+        results = get_discovery_context("title", "content", db_path=tmp_path / "missing.db")
+        assert results == []
+
+    def test_retrieves_matching_kept_articles(self, tmp_path):
+        db_file = tmp_path / "content-discovery.db"
+        conn = sqlite3.connect(str(db_file))
+        conn.execute("""
+            CREATE TABLE items (
+                id INTEGER PRIMARY KEY,
+                url TEXT,
+                title TEXT,
+                source TEXT,
+                tags TEXT,
+                summary TEXT,
+                description TEXT,
+                status TEXT,
+                reviewed_at TEXT
+            );
+        """)
+        conn.execute(
+            "INSERT INTO items VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                1,
+                "https://sqlite.org/arch",
+                "SQLite Architecture Insights",
+                "feed",
+                '["sqlite", "database"]',
+                "Deep dive into SQLite storage engine.",
+                "",
+                "kept",
+                "2026-09-01",
+            ),
+        )
+        conn.execute(
+            "INSERT INTO items VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                2,
+                "https://css.org/flexbox",
+                "Flexbox layout guide",
+                "feed",
+                '["css"]',
+                "CSS tips",
+                "",
+                "kept",
+                "2026-09-01",
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        results = get_discovery_context(
+            "Understanding SQLite Architecture",
+            "This post explores how SQLite works internally.",
+            db_path=db_file,
+        )
+        assert len(results) == 1
+        assert results[0]["title"] == "SQLite Architecture Insights"
+        assert "sqlite" in results[0]["tags"]
+
+
+class TestFormatDiscoveryContext:
+    def test_empty_returns_empty(self):
+        assert format_discovery_context([]) == ""
+
+    def test_formats_items_with_tags(self):
+        items = [
+            {
+                "title": "SQLite Internals",
+                "url": "https://sqlite.org",
+                "tags": ["sqlite", "offline"],
+                "summary": "Storage details.",
+            }
+        ]
+        formatted = format_discovery_context(items)
+        assert "[SQLite Internals](https://sqlite.org)" in formatted
+        assert "[#sqlite, #offline]" in formatted
+        assert "Storage details." in formatted
+

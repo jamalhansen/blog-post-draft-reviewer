@@ -2,11 +2,15 @@
 from local_first_common.personas import get_brand_voice
 
 
-def build_system_prompt(rubric_content: str, vault_context: str | None = None) -> str:
+def build_system_prompt(
+    rubric_content: str,
+    vault_context: str | None = None,
+    discovery_context: str | None = None,
+) -> str:
     brand_voice = get_brand_voice()
     context_section = ""
     if vault_context:
-        context_section = f"""
+        context_section += f"""
 
 AUTHOR'S RELATED VAULT NOTES (BACKGROUND CONTEXT):
 {vault_context}
@@ -14,6 +18,16 @@ AUTHOR'S RELATED VAULT NOTES (BACKGROUND CONTEXT):
 CONTINUITY & CONTEXT GUIDELINES:
 - Assess whether this post is consistent with the author's related notes/series.
 - Suggest cross-links or continuity callbacks if this post references topics covered in earlier notes.
+"""
+    if discovery_context:
+        context_section += f"""
+
+AUTHOR'S SAVED RESEARCH & DISCOVERY ARTICLES (CONTENT ARCHIVE):
+{discovery_context}
+
+RESEARCH CITATION & SYNERGY GUIDELINES:
+- Note opportunities where the author can reference or cite these relevant research items.
+- Point out where arguments could be strengthened with evidence from these sources.
 """
     return f"""You are an expert technical blog post reviewer. Your goal is to review a blog post draft against a specific rubric and provide structured, actionable feedback.
 

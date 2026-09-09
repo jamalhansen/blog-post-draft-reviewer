@@ -23,7 +23,12 @@ from .rubric import load_rubric
 from .schema import ReviewResult
 from .prompts import build_system_prompt, build_user_prompt
 from .display import display_review
-from .context import format_vault_context, get_vault_context
+from .context import (
+    format_discovery_context,
+    format_vault_context,
+    get_discovery_context,
+    get_vault_context,
+)
 from .core import ProviderResolutionError, ReviewExecutionError, review_post
 
 TOOL_NAME = "blog-post-draft-reviewer"
@@ -77,6 +82,13 @@ def review(
         typer.Option(
             "--vault-context/--no-vault-context",
             help="Inject related vault notes as context.",
+        ),
+    ] = True,
+    discovery_context: Annotated[
+        bool,
+        typer.Option(
+            "--discovery-context/--no-discovery-context",
+            help="Inject related kept research articles from content-discovery DB as context.",
         ),
     ] = True,
     dry_run: Annotated[bool, dry_run_option()] = False,
@@ -133,7 +145,23 @@ def review(
                     dim=True,
                 )
 
-    system_prompt = build_system_prompt(rubric, vault_context=vault_context_str)
+    discovery_context_str = None
+    if discovery_context:
+        title = post_data.metadata.get("title", "")
+        disc_items = get_discovery_context(title, content)
+        if disc_items:
+            discovery_context_str = format_discovery_context(disc_items)
+            if verbose:
+                typer.secho(
+                    f"Found {len(disc_items)} related discovery research articles for context.",
+                    dim=True,
+                )
+
+    system_prompt = build_system_prompt(
+        rubric,
+        vault_context=vault_context_str,
+        discovery_context=discovery_context_str,
+    )
     user_prompt = build_user_prompt(content)
 
     try:
