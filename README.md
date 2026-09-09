@@ -66,8 +66,8 @@ This tool follows the [Local-First AI project blueprint](https://github.com/jama
 ```
 blog-post-draft-reviewer/
 ├── src/
-│   ├── main.py          # Typer CLI entry point
-│   ├── logic.py         # Core processing logic
+│   ├── cli.py           # Typer CLI entry point
+│   ├── core.py          # Core processing logic
 │   ├── schema.py        # Pydantic output models
 │   ├── prompts.py       # System and user prompt builders
 │   ├── display.py       # Rich-based terminal formatting
