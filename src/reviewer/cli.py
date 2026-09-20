@@ -49,7 +49,7 @@ def resolve_llm_or_raise(
     actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
     try:
         llm = resolve_provider(
-            PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
+            PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm, tool_name=TOOL_NAME
         )
     except Exception as e:
         raise ProviderResolutionError(str(e)) from e
