@@ -1,5 +1,7 @@
 import pytest
-from reviewer.schema import ReviewResult, ChecklistItem
+from pydantic import ValidationError
+
+from reviewer.schema import ChecklistItem, ReviewResult
 
 
 class TestChecklistItem:
@@ -16,7 +18,7 @@ class TestChecklistItem:
         assert item.note == ""
 
     def test_invalid_status(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ChecklistItem(category="Tone", status="maybe")
 
 
@@ -47,7 +49,7 @@ class TestReviewResult:
     def test_missing_required_field(self):
         payload = self._valid_payload()
         del payload["overall"]
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ReviewResult.model_validate(payload)
 
     def test_model_dump_json(self):

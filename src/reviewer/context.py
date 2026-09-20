@@ -7,7 +7,6 @@ import os
 import re
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 
 def get_vsearch_db_path() -> Path:
@@ -35,9 +34,9 @@ def extract_search_terms(title: str, content: str) -> str:
 def get_vault_context(
     title: str,
     content: str,
-    current_file: Optional[Path | str] = None,
+    current_file: Path | str | None = None,
     top_k: int = 3,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> list[dict]:
     """Retrieve related chunks from the vault for background context."""
     path = db_path or get_vsearch_db_path()
@@ -77,7 +76,7 @@ def get_vault_context(
         cursor = conn.execute(sql, (fts_query, top_k * 3))
         rows = cursor.fetchall()
         conn.close()
-    except Exception:
+    except Exception:  # noqa: BLE001 - optional context; any DB/query failure should degrade to none, not crash the review
         return []
 
     for _, source_file, breadcrumb, text, rank in rows:
@@ -124,7 +123,7 @@ def get_discovery_context(
     title: str,
     content: str,
     top_k: int = 3,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> list[dict]:
     """Retrieve relevant kept research items from content-discovery archive."""
     path = db_path or get_discovery_db_path()
@@ -151,7 +150,7 @@ def get_discovery_context(
             """
         ).fetchall()
         conn.close()
-    except Exception:
+    except Exception:  # noqa: BLE001 - optional context; any DB/query failure should degrade to none, not crash the review
         return []
 
     matched: list[dict] = []

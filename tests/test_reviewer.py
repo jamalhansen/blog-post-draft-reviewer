@@ -3,16 +3,16 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from local_first_common.testing import MockProvider
 from typer.testing import CliRunner
 
-from reviewer.cli import app
 from reviewer.cli import (
     ProviderResolutionError,
     ReviewExecutionError,
+    app,
     resolve_llm_or_raise,
     review_post_or_raise,
 )
-from local_first_common.testing import MockProvider
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SAMPLE_DRAFT = str(FIXTURES / "sample-draft.md")
@@ -132,14 +132,12 @@ class TestStrictHelpers:
     def test_resolve_llm_or_raise_wraps_errors(self):
         with patch(
             "reviewer.cli.resolve_provider", side_effect=RuntimeError("no key")
-        ):
-            with pytest.raises(ProviderResolutionError, match="no key"):
-                resolve_llm_or_raise("groq", None, False, False)
+        ), pytest.raises(ProviderResolutionError, match="no key"):
+            resolve_llm_or_raise("groq", None, False, False)
 
     def test_review_post_or_raise_wraps_errors(self):
         mock_llm = MockProvider(response=VALID_RESPONSE)
         with patch(
             "reviewer.cli.review_post", side_effect=RuntimeError("bad response")
-        ):
-            with pytest.raises(ReviewExecutionError, match="bad response"):
-                review_post_or_raise(mock_llm, "system", "user")
+        ), pytest.raises(ReviewExecutionError, match="bad response"):
+            review_post_or_raise(mock_llm, "system", "user")

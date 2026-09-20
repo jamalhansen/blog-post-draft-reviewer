@@ -1,28 +1,23 @@
-from local_first_common.config import get_setting
-
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import frontmatter
 import typer
-
-from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
-    init_config_option,
-    dry_run_option,
-    no_llm_option,
-    verbose_option,
     debug_option,
-    resolve_provider,
-    resolve_dry_run,
-    provider_option,
+    dry_run_option,
+    init_config_option,
     model_option,
+    no_llm_option,
+    provider_option,
+    resolve_dry_run,
+    resolve_provider,
+    verbose_option,
 )
+from local_first_common.config import get_setting
+from local_first_common.providers import PROVIDERS
 from local_first_common.tracking import register_tool, timed_run
-from .rubric import load_rubric
-from .schema import ReviewResult
-from .prompts import build_system_prompt, build_user_prompt
-from .display import display_review
+
 from .context import (
     format_discovery_context,
     format_vault_context,
@@ -30,6 +25,10 @@ from .context import (
     get_vault_context,
 )
 from .core import ProviderResolutionError, ReviewExecutionError, review_post
+from .display import display_review
+from .prompts import build_system_prompt, build_user_prompt
+from .rubric import load_rubric
+from .schema import ReviewResult
 
 TOOL_NAME = "blog-post-draft-reviewer"
 DEFAULTS = {"provider": "ollama", "model": "llama3"}
@@ -41,7 +40,7 @@ app = typer.Typer()
 
 
 def resolve_llm_or_raise(
-    provider: str, model: Optional[str], debug: bool, no_llm: bool
+    provider: str, model: str | None, debug: bool, no_llm: bool
 ):
     """Resolve LLM provider or raise typed error."""
     actual_provider = get_setting(
@@ -52,7 +51,7 @@ def resolve_llm_or_raise(
         llm = resolve_provider(
             PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise ProviderResolutionError(str(e)) from e
     return actual_provider, actual_model, llm
 
@@ -63,7 +62,7 @@ def review_post_or_raise(
     """Run review call and raise typed error on failure."""
     try:
         return review_post(llm, system_prompt, user_prompt, verbose=verbose)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise ReviewExecutionError(str(e)) from e
 
 
@@ -73,7 +72,7 @@ def review(
         Path, typer.Option("--file", "-f", help="Path to blog post markdown file.")
     ],
     provider: Annotated[str, provider_option()] = "ollama",
-    model: Annotated[Optional[str], model_option()] = None,
+    model: Annotated[str | None, model_option()] = None,
     output: Annotated[
         str, typer.Option("--output", "-o", help="Output format: text or json.")
     ] = "text",
@@ -99,7 +98,7 @@ def review(
 ):
     """Review a blog post draft against a rubric."""
     try:
-        actual_provider, actual_model, llm = resolve_llm_or_raise(
+        actual_provider, _actual_model, llm = resolve_llm_or_raise(
             provider, model, debug, no_llm
         )
     except ProviderResolutionError as e:
