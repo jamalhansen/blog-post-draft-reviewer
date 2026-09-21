@@ -16,7 +16,7 @@ from local_first_common.cli import (
 )
 from local_first_common.config import get_setting
 from local_first_common.providers import PROVIDERS
-from local_first_common.tracking import register_tool, timed_run
+from local_first_common.tracking import register_tool
 
 from .context import (
     format_discovery_context,
@@ -164,15 +164,11 @@ def review(
     user_prompt = build_user_prompt(content)
 
     try:
-        with timed_run(
-            "blog-post-draft-reviewer", llm.model, source_location=str(file)
-        ) as run:
-            result = review_post_or_raise(
-                llm, system_prompt, user_prompt, verbose=verbose
-            )
-            run.item_count = 1
-            run.input_tokens = getattr(llm, "input_tokens", None) or None
-            run.output_tokens = getattr(llm, "output_tokens", None) or None
+        llm.source_location = str(file)
+        llm.item_count = 1
+        result = review_post_or_raise(
+            llm, system_prompt, user_prompt, verbose=verbose
+        )
         if output == "json":
             typer.echo(result.model_dump_json(indent=2))
         else:
