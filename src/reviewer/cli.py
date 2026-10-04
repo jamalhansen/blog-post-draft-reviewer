@@ -103,7 +103,7 @@ def review(
         )
     except ProviderResolutionError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     dry_run = resolve_dry_run(dry_run, no_llm)
 
@@ -187,4 +187,4 @@ def review(
     except ReviewExecutionError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         typer.echo("Done. Processed: 0, Skipped: 1")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
