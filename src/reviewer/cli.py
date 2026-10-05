@@ -37,15 +37,9 @@ _TOOL = register_tool(TOOL_NAME)
 app = typer.Typer()
 
 
-
-
-def resolve_llm_or_raise(
-    provider: str, model: str | None, debug: bool, no_llm: bool
-):
+def resolve_llm_or_raise(provider: str, model: str | None, debug: bool, no_llm: bool):
     """Resolve LLM provider or raise typed error."""
-    actual_provider = get_setting(
-        TOOL_NAME, "provider", cli_val=provider, default="ollama"
-    )
+    actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
     actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
     try:
         llm = resolve_provider(
@@ -56,9 +50,7 @@ def resolve_llm_or_raise(
     return actual_provider, actual_model, llm
 
 
-def review_post_or_raise(
-    llm, system_prompt: str, user_prompt: str, verbose: bool = False
-) -> ReviewResult:
+def review_post_or_raise(llm, system_prompt: str, user_prompt: str, verbose: bool = False) -> ReviewResult:
     """Run review call and raise typed error on failure."""
     try:
         return review_post(llm, system_prompt, user_prompt, verbose=verbose)
@@ -68,14 +60,10 @@ def review_post_or_raise(
 
 @app.command()
 def review(
-    file: Annotated[
-        Path, typer.Option("--file", "-f", help="Path to blog post markdown file.")
-    ],
+    file: Annotated[Path, typer.Option("--file", "-f", help="Path to blog post markdown file.")],
     provider: Annotated[str, provider_option()] = "ollama",
     model: Annotated[str | None, model_option()] = None,
-    output: Annotated[
-        str, typer.Option("--output", "-o", help="Output format: text or json.")
-    ] = "text",
+    output: Annotated[str, typer.Option("--output", "-o", help="Output format: text or json.")] = "text",
     vault_context: Annotated[
         bool,
         typer.Option(
@@ -98,9 +86,7 @@ def review(
 ):
     """Review a blog post draft against a rubric."""
     try:
-        actual_provider, _actual_model, llm = resolve_llm_or_raise(
-            provider, model, debug, no_llm
-        )
+        actual_provider, _actual_model, llm = resolve_llm_or_raise(provider, model, debug, no_llm)
     except ProviderResolutionError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from None
@@ -166,18 +152,14 @@ def review(
     try:
         llm.source_location = str(file)
         llm.item_count = 1
-        result = review_post_or_raise(
-            llm, system_prompt, user_prompt, verbose=verbose
-        )
+        result = review_post_or_raise(llm, system_prompt, user_prompt, verbose=verbose)
         if output == "json":
             typer.echo(result.model_dump_json(indent=2))
         else:
             display_review(result)
 
         if dry_run:
-            typer.echo(
-                "\n[dry-run] Results printed to stdout. No files would be modified."
-            )
+            typer.echo("\n[dry-run] Results printed to stdout. No files would be modified.")
 
         typer.echo("Done. Processed: 1, Skipped: 0")
 

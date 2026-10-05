@@ -8,6 +8,7 @@ class ChecklistItem(BaseModel):
     status: Literal["pass", "fail", "warn"]
     note: str = ""
 
+
 class ReviewResult(BaseModel):
     overall: Literal["pass", "fail", "warn"]
     word_count: int

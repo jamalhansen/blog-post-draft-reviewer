@@ -191,4 +191,3 @@ class TestFormatDiscoveryContext:
         assert "[SQLite Internals](https://sqlite.org)" in formatted
         assert "[#sqlite, #offline]" in formatted
         assert "Storage details." in formatted
-

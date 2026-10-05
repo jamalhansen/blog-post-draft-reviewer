@@ -18,7 +18,7 @@ class TestBuildSystemPrompt:
         assert len(prompt) > 0
 
     def test_includes_vault_context(self):
-        context = "1. Note: `notes/sql.md`\n   \"Prior discussion on NULLs.\""
+        context = '1. Note: `notes/sql.md`\n   "Prior discussion on NULLs."'
         prompt = build_system_prompt("rubric", vault_context=context)
         assert "AUTHOR'S RELATED VAULT NOTES" in prompt
         assert "notes/sql.md" in prompt

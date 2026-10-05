@@ -7,6 +7,7 @@ from .schema import ReviewResult
 
 console = Console()
 
+
 def format_status(status: str) -> str:
     if status == "pass":
         return "[green]PASS[/green]"
@@ -16,13 +17,16 @@ def format_status(status: str) -> str:
         return "[yellow]WARN[/yellow]"
     return status
 
+
 def display_review(result: ReviewResult):
-    console.print(Panel(
-        Text(result.summary, style="bold italic"),
-        title=f"Overall Verdict: {format_status(result.overall)}",
-        subtitle=f"Word Count: {result.word_count} | Post Type: {result.post_type.title()}",
-        expand=False
-    ))
+    console.print(
+        Panel(
+            Text(result.summary, style="bold italic"),
+            title=f"Overall Verdict: {format_status(result.overall)}",
+            subtitle=f"Word Count: {result.word_count} | Post Type: {result.post_type.title()}",
+            expand=False,
+        )
+    )
 
     table = Table(title="Checklist Items", show_header=True, header_style="bold magenta")
     table.add_column("Category", style="cyan", width=20)

@@ -47,7 +47,7 @@ def get_vault_context(
     if not search_text:
         return []
 
-    tokens = re.findall(r'\"([^\"]+)\"|(\w+)', search_text)
+    tokens = re.findall(r"\"([^\"]+)\"|(\w+)", search_text)
     terms: list[str] = []
     for phrase, word in tokens:
         if phrase:
@@ -107,7 +107,7 @@ def format_vault_context(context_items: list[dict]) -> str:
     for i, item in enumerate(context_items, start=1):
         src = item["source_file"]
         bc = f" (Section: {item['breadcrumb']})" if item.get("breadcrumb") else ""
-        lines.append(f"{i}. Note: `{src}`{bc}\n   \"{item['snippet']}\"")
+        lines.append(f'{i}. Note: `{src}`{bc}\n   "{item["snippet"]}"')
     return "\n\n".join(lines)
 
 
@@ -158,19 +158,18 @@ def get_discovery_context(
         item = dict(r)
         item_tags: list[str] = []
         try:
-            item_tags = [
-                str(t).strip().lower()
-                for t in json.loads(item.get("tags") or "[]")
-            ]
+            item_tags = [str(t).strip().lower() for t in json.loads(item.get("tags") or "[]")]
         except (json.JSONDecodeError, TypeError):
             pass
-        searchable = " ".join([
-            item.get("title") or "",
-            item.get("summary") or "",
-            item.get("description") or "",
-            item.get("source") or "",
-            " ".join(item_tags),
-        ]).lower()
+        searchable = " ".join(
+            [
+                item.get("title") or "",
+                item.get("summary") or "",
+                item.get("description") or "",
+                item.get("source") or "",
+                " ".join(item_tags),
+            ]
+        ).lower()
 
         overlap = sum(1 for w in words if w in searchable)
         if overlap > 0:
@@ -195,6 +194,5 @@ def format_discovery_context(items: list[dict]) -> str:
     lines = []
     for i, item in enumerate(items, start=1):
         tag_str = f" [#{', #'.join(item['tags'])}]" if item.get("tags") else ""
-        lines.append(f"{i}. [{item['title']}]({item['url']}){tag_str}\n   \"{item['summary']}\"")
+        lines.append(f'{i}. [{item["title"]}]({item["url"]}){tag_str}\n   "{item["summary"]}"')
     return "\n\n".join(lines)
-

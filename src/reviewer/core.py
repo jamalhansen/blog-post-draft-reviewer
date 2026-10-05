@@ -15,9 +15,7 @@ class ReviewExecutionError(BlogPostReviewerError):
     """Raised when the review call or parsing fails."""
 
 
-def review_post(
-    llm, system_prompt: str, user_prompt: str, verbose: bool = False
-) -> ReviewResult:
+def review_post(llm, system_prompt: str, user_prompt: str, verbose: bool = False) -> ReviewResult:
     """Core logic to call LLM and parse the review result."""
     result = llm.complete(system_prompt, user_prompt, response_model=ReviewResult)
     return ReviewResult.model_validate(result)

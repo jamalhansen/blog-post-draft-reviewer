@@ -1,4 +1,3 @@
-
 from local_first_common.personas import get_brand_voice
 
 
@@ -68,6 +67,7 @@ EXAMPLE JSON STRUCTURE:
   "summary": "Overall the post covers the technical aspects well but needs a stronger opening hook to engage readers."
 }}
 """
+
 
 def build_user_prompt(post_content: str) -> str:
     return f"""Please review the following blog post draft:
