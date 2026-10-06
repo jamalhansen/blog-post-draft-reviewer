@@ -19,7 +19,7 @@ class TestChecklistItem:
 
     def test_invalid_status(self):
         with pytest.raises(ValidationError):
-            ChecklistItem(category="Tone", status="maybe")
+            ChecklistItem(category="Tone", status="maybe")  # pyright: ignore[reportArgumentType]  # invalid on purpose
 
 
 class TestReviewResult:

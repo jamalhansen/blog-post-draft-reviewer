@@ -120,7 +120,7 @@ def review(
 
     vault_context_str = None
     if vault_context:
-        title = post_data.metadata.get("title", "")
+        title = str(post_data.metadata.get("title", ""))
         related = get_vault_context(title, content, current_file=file)
         if related:
             vault_context_str = format_vault_context(related)
@@ -132,7 +132,7 @@ def review(
 
     discovery_context_str = None
     if discovery_context:
-        title = post_data.metadata.get("title", "")
+        title = str(post_data.metadata.get("title", ""))
         disc_items = get_discovery_context(title, content)
         if disc_items:
             discovery_context_str = format_discovery_context(disc_items)
